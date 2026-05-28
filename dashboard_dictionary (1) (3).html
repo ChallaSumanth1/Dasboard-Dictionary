@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Dictionary</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--surface3:#2a2f45;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0;--muted:#8891a8;
+  --accent:#5b6ef5;--a2:#38d9a9;--a3:#f5a623;--a4:#f06292;--a5:#ab68ff;
+  --r:10px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+
+/* Sidebar */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.logo{font-size:15px;font-weight:600;letter-spacing:-.3px;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.logo-icon{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.nav-label{font-size:10px;font-weight:600;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase;padding:10px 8px 4px}
+.nav-item{padding:7px 12px;border-radius:7px;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:9px;transition:all .12s;user-select:none}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(91,110,245,.18);color:var(--accent);font-weight:500}
+.nav-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.nav-count{margin-left:auto;font-size:11px;color:var(--muted)}
+.sidebar-footer{margin-top:auto;padding-top:14px;border-top:1px solid var(--border)}
+.sf-row{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;padding:3px 0}
+.sf-row strong{color:var(--text)}
+
+/* Main */
+.main{padding:28px 32px;overflow:auto}
+.page-header{margin-bottom:24px}
+.breadcrumb{font-size:11px;color:var(--muted);margin-bottom:10px;display:flex;gap:5px;align-items:center}
+.page-title{font-size:22px;font-weight:600;letter-spacing:-.5px}
+.page-sub{color:var(--muted);font-size:13px;margin-top:3px}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden;transition:border-color .15s}
+.kpi:hover{border-color:var(--border2)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,var(--accent))}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:600;letter-spacing:-1px}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* Charts */
+.charts-row{display:grid;grid-template-columns:1fr 300px;gap:14px;margin-bottom:22px}
+.charts-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px}
+.chart-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.chart-sub{font-size:11px;color:var(--muted);margin-bottom:14px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* Table card */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.table-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.table-title{font-size:13px;font-weight:600}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.search-box{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:6px 11px;color:var(--text);font-family:inherit;font-size:13px;width:200px;outline:none;transition:border-color .15s}
+.search-box::placeholder{color:var(--muted)}
+.search-box:focus{border-color:var(--accent)}
+.fsel{background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:6px 9px;color:var(--text);font-family:inherit;font-size:12px;outline:none;cursor:pointer}
+.fsel:focus{border-color:var(--accent)}
+.count-tag{font-size:12px;color:var(--muted);white-space:nowrap}
+.count-tag strong{color:var(--accent)}
+.btn-add{background:var(--accent);border:none;border-radius:7px;padding:6px 14px;color:#fff;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:opacity .15s;white-space:nowrap}
+.btn-add:hover{opacity:.85}
+
+/* Table */
+.table-wrap{overflow-x:auto;max-height:560px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+thead{position:sticky;top:0;z-index:2}
+thead tr{background:var(--surface2);border-bottom:1px solid var(--border2)}
+th{padding:9px 14px;font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);text-align:left;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--text)}
+th.sorted{color:var(--accent)}
+.sort-icon{margin-left:3px;opacity:.4;font-style:normal}
+th.sorted .sort-icon{opacity:1}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.025)}
+td{padding:10px 14px;font-size:13px;vertical-align:top}
+td.num{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);vertical-align:middle;width:48px}
+.col-name{width:190px}
+.col-aud{width:100px}
+.col-team{width:140px}
+.col-poc{width:130px}
+.col-db{width:100px}
+.col-desc{width:auto}
+.col-actions{width:70px;text-align:center}
+
+/* Name cell */
+.name-primary{font-size:13px;font-weight:500;color:var(--text);line-height:1.3}
+.name-sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* Description cell */
+.desc-cell{font-size:12px;color:var(--muted);line-height:1.5}
+.desc-cell.expanded{color:var(--text)}
+.desc-short{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.desc-short.expanded{display:block;overflow:visible}
+.desc-toggle{font-size:11px;color:var(--accent);cursor:pointer;margin-top:3px;display:inline-block;background:none;border:none;padding:0;font-family:inherit}
+.desc-toggle:hover{text-decoration:underline}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.b-tps{background:rgba(91,110,245,.15);color:#8fa3ff}
+.b-mdfl{background:rgba(56,217,169,.15);color:#38d9a9}
+.b-both{background:rgba(245,166,35,.15);color:#f5a623}
+.b-pm{background:rgba(171,104,255,.15);color:#ab68ff}
+.b-other{background:rgba(136,145,168,.1);color:var(--muted)}
+.b-sql{background:rgba(91,110,245,.1);color:#8fa3ff}
+.b-excel{background:rgba(56,217,169,.1);color:#38d9a9}
+.b-sqlexcel{background:rgba(245,166,35,.1);color:#f5a623}
+
+/* POC */
+.poc-cell{display:flex;align-items:center;gap:6px}
+.poc-avatar{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0}
+.poc-name{font-size:12px}
+
+/* Action buttons */
+.action-btns{display:flex;gap:5px;justify-content:center;align-items:center}
+.btn-icon{background:none;border:1px solid var(--border2);border-radius:6px;padding:4px 7px;cursor:pointer;font-size:12px;color:var(--muted);transition:all .12s;line-height:1}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent)}
+.btn-icon.danger:hover{border-color:#f06292;color:#f06292}
+
+/* Empty */
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:13px}
+
+/* ---- MODAL ---- */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:28px 32px;width:640px;max-width:95vw;max-height:90vh;overflow-y:auto;transform:translateY(10px);transition:transform .2s;position:relative}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:22px}
+.modal-close{position:absolute;top:18px;right:20px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:4px}
+.modal-close:hover{color:var(--text)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.form-input,.form-select,.form-textarea{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .15s;width:100%}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-textarea{min-height:90px;resize:vertical;line-height:1.5}
+.form-select option{background:#1a1d27}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;padding-top:18px;border-top:1px solid var(--border)}
+.btn-cancel{background:none;border:1px solid var(--border2);border-radius:8px;padding:8px 18px;color:var(--muted);font-family:inherit;font-size:13px;cursor:pointer;transition:all .12s}
+.btn-cancel:hover{border-color:var(--border2);color:var(--text)}
+.btn-save{background:var(--accent);border:none;border-radius:8px;padding:8px 22px;color:#fff;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.btn-save:hover{opacity:.85}
+.btn-delete-modal{background:rgba(240,98,146,.12);border:1px solid rgba(240,98,146,.3);border-radius:8px;padding:8px 18px;color:#f06292;font-family:inherit;font-size:13px;cursor:pointer;transition:all .12s;margin-right:auto}
+.btn-delete-modal:hover{background:rgba(240,98,146,.22)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:#1e2235;border:1px solid var(--border2);border-radius:9px;padding:10px 18px;font-size:13px;color:var(--text);z-index:200;transform:translateY(10px);opacity:0;transition:all .25s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:#38d9a9;color:#38d9a9}
+.toast.error{border-color:#f06292;color:#f06292}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">📊</div>
+      Dashboard Dict
+    </div>
+
+    <div class="nav-label">Views</div>
+    <div class="nav-item active" id="nav-overview" onclick="setView('overview')">
+      <div class="nav-dot" style="background:#5b6ef5"></div> Overview
+    </div>
+    <div class="nav-item" id="nav-table" onclick="setView('table')">
+      <div class="nav-dot" style="background:#38d9a9"></div> All Dashboards
+    </div>
+
+    <div class="nav-label">Audience</div>
+    <div class="nav-item" id="nav-All" onclick="filterSidebar('audience','All')">
+      <div class="nav-dot" style="background:#8891a8"></div> All <span class="nav-count" id="nc-all">67</span>
+    </div>
+    <div class="nav-item" id="nav-TPS" onclick="filterSidebar('audience','TPS')">
+      <div class="nav-dot" style="background:#8fa3ff"></div> TPS <span class="nav-count" id="nc-tps">48</span>
+    </div>
+    <div class="nav-item" id="nav-MDFL" onclick="filterSidebar('audience','MDFL')">
+      <div class="nav-dot" style="background:#38d9a9"></div> MDFL <span class="nav-count" id="nc-mdfl">12</span>
+    </div>
+    <div class="nav-item" id="nav-TPS & MDFL" onclick="filterSidebar('audience','TPS & MDFL')">
+      <div class="nav-dot" style="background:#f5a623"></div> TPS &amp; MDFL <span class="nav-count" id="nc-both">4</span>
+    </div>
+    <div class="nav-item" id="nav-PM" onclick="filterSidebar('audience','PM')">
+      <div class="nav-dot" style="background:#ab68ff"></div> PM <span class="nav-count" id="nc-pm">1</span>
+    </div>
+
+    <div class="nav-label">Teams</div>
+    <div class="nav-item" id="nav-t-Panel Quality" onclick="filterSidebar('team','Panel Quality')">
+      <div class="nav-dot" style="background:#f06292"></div> Panel Quality <span class="nav-count">19</span>
+    </div>
+    <div class="nav-item" id="nav-t-CME" onclick="filterSidebar('team','CME')">
+      <div class="nav-dot" style="background:#5b6ef5"></div> CME <span class="nav-count">15</span>
+    </div>
+    <div class="nav-item" id="nav-t-Sampling Team" onclick="filterSidebar('team','Sampling Team')">
+      <div class="nav-dot" style="background:#38d9a9"></div> Sampling <span class="nav-count">11</span>
+    </div>
+    <div class="nav-item" id="nav-t-Panel Building Team" onclick="filterSidebar('team','Panel Building Team')">
+      <div class="nav-dot" style="background:#f5a623"></div> Panel Building <span class="nav-count">9</span>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sf-row"><span>Total</span><strong id="sf-total">67</strong></div>
+      <div class="sf-row"><span>Teams</span><strong>8</strong></div>
+      <div class="sf-row"><span>POCs</span><strong>18</strong></div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <div id="sec-overview">
+      <div class="page-header">
+        <div class="breadcrumb"><span>Home</span> › Overview</div>
+        <div class="page-title">Dashboard Dictionary</div>
+        <div class="page-sub">Complete inventory of all reporting dashboards across TPS and MDFL platforms</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi" style="--kc:#5b6ef5"><div class="kpi-label">Total</div><div class="kpi-value" id="kpi-total">67</div><div class="kpi-sub">Dashboards</div></div>
+        <div class="kpi" style="--kc:#8fa3ff"><div class="kpi-label">TPS</div><div class="kpi-value" id="kpi-tps">48</div><div class="kpi-sub">71.6% of total</div></div>
+        <div class="kpi" style="--kc:#38d9a9"><div class="kpi-label">MDFL</div><div class="kpi-value" id="kpi-mdfl">12</div><div class="kpi-sub">17.9% of total</div></div>
+        <div class="kpi" style="--kc:#f5a623"><div class="kpi-label">TPS &amp; MDFL</div><div class="kpi-value" id="kpi-both">4</div><div class="kpi-sub">Shared audience</div></div>
+        <div class="kpi" style="--kc:#ab68ff"><div class="kpi-label">SQL-only</div><div class="kpi-value" id="kpi-sql">49</div><div class="kpi-sub">73.1% of dashboards</div></div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Dashboards by team</div>
+          <div class="chart-sub">Count per team</div>
+          <div style="position:relative;height:210px"><canvas id="teamChart" role="img" aria-label="Bar chart of dashboards per team">Panel Quality:19, CME:15, Sampling:11, Panel Building:9, Vendor Mgmt:6, PMs:4, Others:2, Finance:1</canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Data source</div>
+          <div class="chart-sub">By database type</div>
+          <div style="position:relative;height:150px"><canvas id="dbChart" role="img" aria-label="Donut chart of data sources">SQL:49, SQL+Excel:16, Excel:2</canvas></div>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#5b6ef5"></div>SQL — 73%</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#f5a623"></div>SQL+Excel — 24%</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#38d9a9"></div>Excel — 3%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row2">
+        <div class="chart-card">
+          <div class="chart-title">Audience breakdown</div>
+          <div class="chart-sub">Dashboards per audience</div>
+          <div style="position:relative;height:170px"><canvas id="audChart" role="img" aria-label="Bar chart of audience breakdown">TPS:48, MDFL:12, TPS&MDFL:4, PM:1, Other:2</canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Top POCs by ownership</div>
+          <div class="chart-sub">Most active owners</div>
+          <div style="position:relative;height:170px"><canvas id="pocChart" role="img" aria-label="Bar chart of top POCs">Phanendra Vasu:18, Gururaj Shetty:12, VeeraBahu:8, Deepak:6, Saddam:4</canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div id="sec-table" style="display:none">
+      <div class="page-header">
+        <div class="breadcrumb"><span>Home</span> › All Dashboards</div>
+        <div class="page-title">All Dashboards</div>
+        <div class="page-sub">Search, filter, edit, and manage the full dashboard inventory</div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Dashboard inventory</div>
+        <div class="controls">
+          <input class="search-box" id="searchInput" placeholder="Search name, team, POC…" oninput="applyFilters()">
+          <select class="fsel" id="audFilter" onchange="applyFilters()">
+            <option value="">All audiences</option>
+            <option>TPS</option><option>MDFL</option><option>TPS & MDFL</option><option>PM</option>
+          </select>
+          <select class="fsel" id="teamFilter" onchange="applyFilters()">
+            <option value="">All teams</option>
+            <option>Panel Quality</option><option>CME</option><option>Sampling Team</option>
+            <option>Panel Building Team</option><option>Vendor Management Team</option>
+            <option>PM's</option><option>Others</option><option>Finance Team</option>
+          </select>
+          <select class="fsel" id="dbFilter" onchange="applyFilters()">
+            <option value="">All sources</option>
+            <option>SQL</option><option>SQL + Excel</option><option>Excel</option>
+          </select>
+          <span class="count-tag">Showing <strong id="countDisplay">67</strong> of <span id="totalCount">67</span></span>
+          <button class="btn-add" onclick="openAddModal()">＋ Add entry</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="mainTable">
+          <colgroup>
+            <col style="width:46px">
+            <col style="width:190px">
+            <col style="width:100px">
+            <col style="width:138px">
+            <col style="width:128px">
+            <col style="width:90px">
+            <col>
+            <col style="width:72px">
+          </colgroup>
+          <thead>
+            <tr>
+              <th onclick="sortTable('no')"># <i class="sort-icon">↕</i></th>
+              <th onclick="sortTable('name')">Report name <i class="sort-icon">↕</i></th>
+              <th onclick="sortTable('audience')">Audience <i class="sort-icon">↕</i></th>
+              <th onclick="sortTable('team')">Team <i class="sort-icon">↕</i></th>
+              <th onclick="sortTable('poc')">POC <i class="sort-icon">↕</i></th>
+              <th onclick="sortTable('db')">Source <i class="sort-icon">↕</i></th>
+              <th>Description</th>
+              <th style="text-align:center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <div class="empty" id="emptyState" style="display:none">No dashboards match your filters.</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modalTitle">Add new dashboard</div>
+    <div class="modal-sub" id="modalSub">Fill in the details below to add a new dashboard entry</div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Report name *</label>
+        <input class="form-input" id="f-name" placeholder="e.g. API Projects Dashboard">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dashboard name</label>
+        <input class="form-input" id="f-dashname" placeholder="e.g. TPS - Sampling - API Projects">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Audience</label>
+        <select class="form-select" id="f-audience">
+          <option value="">Select…</option>
+          <option>TPS</option><option>MDFL</option><option>TPS & MDFL</option><option>PM</option><option>-</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Team</label>
+        <select class="form-select" id="f-team">
+          <option value="">Select…</option>
+          <option>Panel Quality</option><option>CME</option><option>Sampling Team</option>
+          <option>Panel Building Team</option><option>Vendor Management Team</option>
+          <option>PM's</option><option>Others</option><option>Finance Team</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">POC</label>
+        <input class="form-input" id="f-poc" placeholder="e.g. Phanendra Vasu">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data source</label>
+        <select class="form-select" id="f-db">
+          <option value="">Select…</option>
+          <option>SQL</option><option>SQL + Excel</option><option>Excel</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="f-desc" placeholder="Describe what this dashboard displays, who uses it, and key metrics…"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-delete-modal" id="btnDelete" onclick="deleteEntry()" style="display:none">🗑 Delete</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveEntry()">Save entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const TEAM_COLORS = {'Panel Quality':'#f06292','CME':'#5b6ef5','Sampling Team':'#38d9a9','Panel Building Team':'#f5a623','Vendor Management Team':'#ab68ff',"PM's":'#4dd0e1','Others':'#8891a8','Finance Team':'#ff8a65'};
+const POC_PALETTE = ['#5b6ef5','#38d9a9','#f5a623','#f06292','#ab68ff','#4dd0e1','#ff8a65','#8fa3ff'];
+const pocColors = {};
+let pocIdx = 0;
+function pocColor(n){if(!pocColors[n])pocColors[n]=POC_PALETTE[pocIdx++%POC_PALETTE.length];return pocColors[n]}
+function initials(n){return n.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase()}
+
+let DATA = [{"no":1,"name":"API Projects Dashboard","dashname":"TPS - Sampling - API Projects Dashboard","audience":"TPS","team":"Sampling Team","poc":"Deepak","db":"SQL","desc":"Displays all API vendors survey stats data and captured at sample level."},{"no":2,"name":"Daily Hourly Survey Stats","dashname":"Daily Hour Survey Stats","audience":"TPS","team":"Sampling Team","poc":"Phanendra Vasu","db":"SQL","desc":"Displays daily survey metrics & Completes Trend for Vendor group"},{"no":3,"name":"Overall MRC Dashboard","dashname":"Overall MRC Dashboard","audience":"TPS","team":"Panel Quality","poc":"Internal","db":"SQL + Excel","desc":"Dashboard has Charts & tabular data based on Revenue, Total vendorCost, Internal Project cost, MRC and Avg CPC details at GID, Client, and Vendor-level"},{"no":4,"name":"Client Dashboard (Sampling DB new)","dashname":"TPS - PQ - Client Dashboard","audience":"TPS","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL","desc":"Dashboard has Monthly, Weekly Project Stats & Trends based on Completes Vendor groups. Also has detailed info on Project Status"},{"no":5,"name":"TPS - Vendor Segregation (Sampling DB)","dashname":"TPS - PQ - VendorSegregation","audience":"TPS","team":"Sampling Team","poc":"Gururaj Shetty","db":"SQL","desc":"It displays vendors performance at Client, monthly and project level."},{"no":6,"name":"MDFL Mis Dashboard","dashname":"MDFL - Mis Report","audience":"MDFL","team":"PM's","poc":"Surbhi","db":"Excel","desc":"Displays Target & Achieved Revenue details at client and region level."},{"no":7,"name":"Active Count Trends","dashname":"Active Count Trends","audience":"TPS","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"This shows the daily active panelist trends"},{"no":8,"name":"MDFL Survey Stats","dashname":"MDFL- Daily & Monthly Survey Completes","audience":"MDFL","team":"Sampling Team","poc":"Saddam","db":"SQL","desc":"Displays daily and monthly survey metrics."},{"no":9,"name":"MDFL dashboard active counts","dashname":"MDFL - CME -Active Count Trend","audience":"MDFL","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"This shows the daily active panelist trends"},{"no":10,"name":"Vendor PO data Dashboard","dashname":"Vendor PO Dashboard","audience":"TPS","team":"Sampling Team","poc":"VeeraBahu","db":"SQL","desc":"This dashboard has tabular data for vendor PO. It provides a sample, PID and GID-level view of Actual Completes, PO Completes, and PO Status & Expense Status."},{"no":11,"name":"Insights Team - Project Stats","dashname":"InsightsTeam-ProjectStats","audience":"TPS","team":"Sampling Team","poc":"Dilip Kumar","db":"SQL","desc":"It captured insights team projects for vendor-wise completes & Clientrejects at GID level."},{"no":12,"name":"Redmine Dashboard-DP","dashname":"Redmine Dashboard","audience":"-","team":"Others","poc":"Raveendra","db":"SQL","desc":"This dashboard tracks the DP, SP & QA team's working hours across all projects."},{"no":13,"name":"Panelist Activity - New v/s Old","dashname":"Panelist Activity - New vs Old","audience":"TPS","team":"Panel Quality","poc":"Phanendra Vasu","db":"SQL","desc":"Charts & Data based on Monthly Unique Respondents, Clickers, Completers & new joining Panelist performance"},{"no":14,"name":"MDFL Speciality New","dashname":"MDFL - PB - Recruitment & Speciality Overview","audience":"MDFL","team":"Panel Building Team","poc":"Arul Ramakrishna","db":"SQL","desc":"Survey metrics at monthly and speciality level. Shows a complete view of Speciality and sub-speciality level active count of panelist, Invite, Click, Complete, RR and market level."},{"no":15,"name":"PO_Vendor Completes","dashname":"Partner MIS Dashboard","audience":"TPS","team":"Vendor Management Team","poc":"VeeraBahu","db":"SQL","desc":"This shows PO details at GID level. Market, Vendor, GID & Client level showing vendor cost & CPC."},{"no":16,"name":"Monthly Active Panelist","dashname":"TPS - MAP's Activity Report","audience":"TPS","team":"CME","poc":"Phanendra Vasu","db":"SQL + Excel","desc":"It shows last 30days panelist performance & survey metrics. It has market pivot which shows panelist active, reactive & churn count."},{"no":17,"name":"Vendor Module Dashboard (Sampling Database)","dashname":"Vendor Module Dashboard","audience":"TPS","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL + Excel","desc":"This dashboard highlights vendor performance across all levels. Top 10 vendor based on survey metrics and market-vendor level failure reasons count"},{"no":18,"name":"MDFL-Panel Proportion Report","dashname":"MDFL-Panel Proportion Report","audience":"MDFL","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"Displaying Profiler wise proportion - Total count of Panelist, in 6-12 months & 6M Active %."},{"no":19,"name":"Mobile App Activity Report","dashname":"Mobile App Activity Report","audience":"TPS","team":"CME","poc":"Veera Suriyan","db":"SQL","desc":"It shows based on panelist id level their DOJ, DOL, Login, Device Used Details, SurveyStats count & Trend"},{"no":20,"name":"Panel Engagement","dashname":"Panel Engagement","audience":"TPS","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"Displaying Marketwise Panelist count in last 6 Months status like Active, inactive."},{"no":21,"name":"Panel Engagement MDFL","dashname":"Panel Engagement-MDFL","audience":"MDFL","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"Displaying Marketwise Panelist count in last 6 Months status like Active, inactive."},{"no":22,"name":"Profiling Que/Ans","dashname":"TPS - CME - Panel Proportion Report","audience":"TPS","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"It showing Market wise Profiler panel proportion count like Total, 6 Months, 1Year & Active % based on DOJ & DOLP."},{"no":23,"name":"ProjectwisePIR","dashname":"TPS-Project Wise PIR","audience":"TPS","team":"Sampling Team","poc":"Deepak","db":"SQL","desc":"It represents Project Report details at PID level along with expense status (Points in Review)."},{"no":24,"name":"Reactivation","dashname":"Reactivation & MAU Retention Dashboard","audience":"TPS","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"Reactivate Panelist Dashboard - It shows marketwise Panelist Count who reactivated within 30-180 & more than 180. Retention Dashboard - Displaying month-on-month Retention of panelist counts and % based on their lastparticipation."},{"no":25,"name":"Recruitment Efficiency","dashname":"TPS - CME - RecruitmentEfficiency","audience":"TPS","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"This Dashboard reflects Recruitment count, clicks, complete and unique Count of Panelist and percentages Market & Month wise"},{"no":26,"name":"Recruitment efficiency MDFL","dashname":"MDFL- CME - Recruitment Efficiency","audience":"MDFL","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"This Dashboard reflects Recruitment count, clicks, complete and unique Count of Panelist and percentages Speciality-Subspeciality & Month wise"},{"no":27,"name":"TPS/MDFL - Project Stats","dashname":"TPS & MDFL - Project Stats Report","audience":"TPS & MDFL","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"Displaying on daily basis no. of new projects created and projectid level invites, clicks & Complete"},{"no":28,"name":"Unique Active Panelists - DOLP","dashname":"Unique Active Users Report - DOLP","audience":"TPS","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"Showing Marketwise unique Active Panelist count with date range and detailed report of panelist id level"},{"no":29,"name":"Unsubscribed Trend","dashname":"Unsubscribed Trend - TPS & MDFL","audience":"TPS & MDFL","team":"CME","poc":"Phanendra Vasu","db":"SQL","desc":"TPS- Displaying unsubscribe count in same month & Unsubscribed DOLP Count. MDFL-Displaying unsubscribe count in same month Specility level & Unsubscribed DOLP Count."},{"no":30,"name":"MIS-MDFL (RFP vs Amount)","dashname":"MIS - MDFL RFP Value($) & Invoiced($) Report","audience":"MDFL","team":"PM's","poc":"Subrahmanya M","db":"SQL + Excel","desc":"This dashboard shows Mis Healthcare RFP VS Amount report by Audience, account, month, client and overall basis"},{"no":31,"name":"Increase Blue Line Dashboard","dashname":"Increase Blue line Dashboard","audience":"TPS","team":"Panel Building Team","poc":"Internal","db":"SQL + Excel","desc":"Displaying Surveystats Count and percentage based on completes. Reflecting no. of days between joining - 1invited & 1click. Also detailed summary based UTM Source."},{"no":32,"name":"Panel Building Dashboard - Demographics","dashname":"TPS - PB - Profiling Dashboard","audience":"TPS","team":"Panel Building Team","poc":"Nilesh","db":"SQL + Excel","desc":"Showing Panelist Profilers Demographics completion rate details."},{"no":33,"name":"Panel Building Dashboard Hourly","dashname":"PB Dashboard Hourly","audience":"TPS","team":"Panel Building Team","poc":"Deepak","db":"SQL","desc":"Displaying Daily TPS Report Count Market-wise, Vendor-wise Panelist Status, Survey Status & Leads Count"},{"no":34,"name":"Panel Building Dashboard New","dashname":"Panel Building Dashboard","audience":"TPS","team":"Panel Building Team","poc":"Saddam","db":"SQL","desc":"This Dashboard gives a complete view of Panel Building. Showing at market, recruitment cost, vendor & Campaign level details (based on date of joining)"},{"no":35,"name":"Panel Building Dashboard Updated New Terminologies","dashname":"TPS - PB - PBDashboard New View","audience":"TPS","team":"Panel Building Team","poc":"Saddam","db":"SQL + Excel","desc":"This Dashboard gives a complete view of Panel Building. Showing at market, recruitment cost, vendor & Campaign level details (based on created date aug-24)"},{"no":36,"name":"User Journey Dashboard","dashname":"User Journey Dashboard","audience":"TPS","team":"Panel Building Team","poc":"Internal","db":"SQL + Excel","desc":"Displaying User Journey based on month and market wise like - total leads, intake screened, survey (Invites, clicks, complete) counts."},{"no":37,"name":"Client - Dynata Dashboard","dashname":"Dynata Performance","audience":"TPS","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL","desc":"This Dashboard shows Client - Dynata Performance KPI metrics monthly, weekly & daily report"},{"no":38,"name":"Client - IPSOS Dashboard","dashname":"Ipsos Performance","audience":"TPS","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL","desc":"This Dashboard shows Client - IPSOS Performance KPI metrics monthly, weekly & daily report"},{"no":39,"name":"Vendor Dashboards","dashname":"Vendor Performance Dashboard","audience":"TPS","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL","desc":"This gives overall vendor report includes - KPI Monthly Report, Vendor & Market Threshold limit and top 15 vendor-market completes report"},{"no":40,"name":"MDFL","dashname":"MDFL Panelist","audience":"MDFL","team":"Panel Quality","poc":"Arup","db":"SQL","desc":"This Dashboard showing Month and Market wise segment & panelist count which focusing on approval & rejection."},{"no":41,"name":"MDFL RD Score","dashname":"MDFL RDScore","audience":"MDFL","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL","desc":"This dashboard focusing on duplicate entries, RD Score, dupe score, and reasons for failure at market & vendor level."},{"no":43,"name":"Points Liability dashboard","dashname":"Points Liability Dashboard - TPS & MDFL","audience":"TPS & MDFL","team":"Finance Team","poc":"Satish Natarajan","db":"SQL + Excel","desc":"This Dashboard shows Market level total panelist, point balance and actual liability. Also at panelist id level its reflecting. Based on thresholds points are divided."},{"no":44,"name":"Profiling Dashboard","dashname":"Profiling Progress Dashboard","audience":"TPS","team":"Panel Quality","poc":"Phanendra Vasu","db":"SQL + Excel","desc":"Provide the Marketwise distribution of panelist counts based on profiler-completion percentage buckets, and generate corresponding distributions for DOJ and DOLP."},{"no":45,"name":"Project Life Cycle Dashboard","dashname":"TPS - PQ - Project Life Cycle Dashboard","audience":"TPS","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL","desc":"Displaying Project details in terms of creation and invoiced. Focused on showing no. of days between the process."},{"no":46,"name":"RD Score","dashname":"RD Score","audience":"TPS","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL","desc":"This dashboard focusing on duplicate entries, RD Score, dupe score, and reasons for failure at market & vendor level."},{"no":47,"name":"Recruitment Funnel","dashname":"User Journey","audience":"TPS","team":"Panel Building Team","poc":"Phanendra Vasu","db":"SQL","desc":"This chart displays the recruitment funnel, showing the unique panelist count along with their status-wise counts and survey completion percentages"},{"no":48,"name":"Sample Cost Share","dashname":"Sample Cost Share Dashboard","audience":"TPS","team":"Panel Quality","poc":"Internal","db":"SQL + Excel","desc":"Displaying GID level Avg CPI, Total (completes, Revenue, Sample Cost) & Sample cost share."},{"no":49,"name":"Sampling vendor Performance Metrics","dashname":"Vendor Performance Metrics","audience":"TPS","team":"Panel Quality","poc":"VeeraBahu","db":"SQL + Excel","desc":"This dashboard shows vendor performance, including survey status-wise counts and percentages at the market and client levels, along with other key details"},{"no":50,"name":"Technical suspect","dashname":"TPS - PQ - Technical Suspect","audience":"TPS","team":"Panel Quality","poc":"Arup","db":"SQL","desc":"Displaying Panelist Status wise count and percentages (Market, Month & Vendor level)."},{"no":51,"name":"Technical suspect-2","dashname":"Technical Suspect - 2","audience":"TPS","team":"Panel Quality","poc":"Arup","db":"SQL","desc":"Displaying Panelist Status wise count and percentages (Market, Month & Vendor level)."},{"no":52,"name":"API Dashboard","dashname":"TPS - Sampling - API Projects Dashboard","audience":"TPS","team":"Sampling Team","poc":"Deepak","db":"SQL","desc":"Its showing Vendor-sample Id level project details and reflecting surveystatus wise unique count"},{"no":53,"name":"Monthly & Weekly Survey Stats (Sampling DB)","dashname":"TPS - Sampling - Sampling Dashboard New","audience":"TPS","team":"Sampling Team","poc":"Deepak","db":"SQL + Excel","desc":"Displays Monthly & Weekly survey metrics & Completes Trend for Vendor group at GID, PID, PM and Market level."},{"no":54,"name":"TPS - Device Information","dashname":"TPS - Device Information","audience":"TPS","team":"Sampling Team","poc":"Abhilash","db":"SQL","desc":"Displaying PID-GID level - Vendor wise device information (Desktop/Mobile) for completes. Adhoc Vendor-wise complete percentages."},{"no":55,"name":"PO_Vendor Completes - MDFL","dashname":"Partner MIS Dashboard - MDFL","audience":"MDFL","team":"Vendor Management Team","poc":"VeeraBahu","db":"SQL","desc":"This dashboard has tabular data for vendor PO. It provides a sample, PID and GID-level view of Actual Completes, PO Completes, and PO Status & Expense Status."},{"no":56,"name":"QA TEST Dashboard","dashname":"QA TEST Dashboard","audience":"TPS","team":"Vendor Management Team","poc":"VeeraBahu","db":"SQL","desc":"Displays ProjectID-level test client QA-wise vendor survey-stats counts."},{"no":57,"name":"Redmine Dashboard - SP & QA","dashname":"Redmine Dashboard - SP & QA","audience":"-","team":"Others","poc":"Prathmesh Khot","db":"SQL","desc":"This dashboard tracks the SP & QA team's working hours across all projects."},{"no":58,"name":"Planning & Budgeting Dashboard","dashname":"TPS - Planning and Budgeting Dashboard","audience":"TPS","team":"CME","poc":"Phanendra Vasu","db":"SQL + Excel","desc":"Displaying a broader, month-by-month aggregated view of key metrics such as invites, clicks, and completes. It also tracks engagement accruals and expenses across months"},{"no":59,"name":"Marketing Dashboard","dashname":"Marketing Dashboard - MDFL","audience":"MDFL","team":"Panel Building Team","poc":"Saddam","db":"SQL + Excel","desc":"This dashboard shows monthly marketing and survey metrics by market and specialty, including the MDFL recruitment funnel."},{"no":60,"name":"Vendor quality scoring system","dashname":"Vendor Quality Score","audience":"TPS","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL","desc":"The view reflects vendor-wise analysis using parameter weightage, assessed risk levels, cumulative three-month rolling data, and penalized values"},{"no":61,"name":"Pending PO-Vendor Details","dashname":"Pending - PO Details","audience":"TPS","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL","desc":"Shows vendor-wise pending POs with creation date, pending days, project details, project manager, completion status, and total projects."},{"no":62,"name":"Payment Status(TPS & MDFL)","dashname":"Payment Status - TPS & MDFL","audience":"TPS & MDFL","team":"Vendor Management Team","poc":"VeeraBahu","db":"SQL","desc":"This dashboard provides a comprehensive view of vendor payment status and purchase order management, tracking invoice details, payment progress, and vendor-related information."},{"no":63,"name":"Partner Usage Dashboard","dashname":"Partner Usage Dashboard","audience":"TPS","team":"Vendor Management Team","poc":"VeeraBahu","db":"SQL","desc":"This dashboard provides vendor PO details, survey statistics, and cost data, while also tracking partner extract completions."},{"no":64,"name":"Partner Search Dashboard","dashname":"Partner Search Dashboard","audience":"TPS","team":"Vendor Management Team","poc":"VeeraBahu","db":"SQL","desc":"This dashboard enables partner search at both vendor and market levels, displaying project counts, completion rates, payment terms, and survey statistics by market with corresponding percentages."},{"no":65,"name":"Project Schedule Tracker","dashname":"Project Schedule Tracker","audience":"PM","team":"PM's","poc":"Dilip Kumar","db":"Excel","desc":"Dashboard provides a detailed, team-wise view of work progress across projects at both the task and project levels"},{"no":66,"name":"Billed & Unbilled","dashname":"TPS - Sampling - Billed & Unbilled Dashboard","audience":"TPS","team":"Sampling Team","poc":"Deepak","db":"SQL + Excel","desc":"Displays total completes (internal and external), top 5 countries, clients, project managers, and GIDs. Provides billed and unbilled completes, with breakdowns by country, target audience, and GID-level billing status."},{"no":67,"name":"Detailed Analysis Dashboard","dashname":"Project Life Cycle Analysis","audience":"TPS","team":"Panel Quality","poc":"Gururaj Shetty","db":"SQL","desc":"This report provides a consolidated view of key performance metrics across GID, Client, PM, Market, and Vendor levels, helping stakeholders monitor performance, analyze trends, and support data-driven decision-making."},{"no":68,"name":"PM MIS","dashname":"PMIS Dashboard","audience":"TPS","team":"PM's","poc":"SivaKumar","db":"SQL","desc":"It provides transaction-level insights including client, project, commission values, actuals, sample sizes, vendor cost, and total MRC enabling performance tracking and financial analysis."}];
+
+let maxNo = Math.max(...DATA.map(d=>d.no));
+let filtered = [...DATA];
+let sortKey = 'no', sortDir = 1;
+let editIdx = null;
+
+/* ---- BADGES ---- */
+function audBadge(a){
+  const map={'TPS':'b-tps','MDFL':'b-mdfl','TPS & MDFL':'b-both','PM':'b-pm'};
+  return `<span class="badge ${map[a]||'b-other'}">${a||'—'}</span>`;
+}
+function dbBadge(d){
+  if(d==='SQL')return`<span class="badge b-sql">SQL</span>`;
+  if(d==='Excel')return`<span class="badge b-excel">Excel</span>`;
+  return`<span class="badge b-sqlexcel">SQL+Excel</span>`;
+}
+
+/* ---- TABLE RENDER ---- */
+function renderTable(){
+  const tbody=document.getElementById('tableBody');
+  const empty=document.getElementById('emptyState');
+  document.getElementById('countDisplay').textContent=filtered.length;
+  document.getElementById('totalCount').textContent=DATA.length;
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  tbody.innerHTML=filtered.map((r,fi)=>{
+    const realIdx=DATA.indexOf(r);
+    const tc=TEAM_COLORS[r.team]||'#8891a8';
+    const pc=pocColor(r.poc);
+    const descId='desc-'+realIdx;
+    const descSafe=r.desc.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return `<tr>
+      <td class="num">${r.no}</td>
+      <td><div class="name-primary">${r.name}</div><div class="name-sub">${r.dashname}</div></td>
+      <td>${audBadge(r.audience)}</td>
+      <td><span style="font-size:12px;color:${tc}">${r.team}</span></td>
+      <td><div class="poc-cell"><div class="poc-avatar" style="background:${pc}22;color:${pc}">${initials(r.poc)}</div><span class="poc-name">${r.poc}</span></div></td>
+      <td>${dbBadge(r.db)}</td>
+      <td>
+        <div class="desc-cell">
+          <div class="desc-short" id="${descId}">${descSafe}</div>
+          <button class="desc-toggle" onclick="toggleDesc('${descId}',this)">Show more</button>
+        </div>
+      </td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-icon" onclick="openEditModal(${realIdx})" title="Edit">✎</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleDesc(id,btn){
+  const el=document.getElementById(id);
+  const expanded=el.classList.contains('expanded');
+  el.classList.toggle('expanded',!expanded);
+  el.parentElement.classList.toggle('expanded',!expanded);
+  btn.textContent=expanded?'Show more':'Show less';
+}
+
+/* ---- FILTERS ---- */
+function applyFilters(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const aud=document.getElementById('audFilter').value;
+  const team=document.getElementById('teamFilter').value;
+  const db=document.getElementById('dbFilter').value;
+  filtered=DATA.filter(r=>{
+    const m=!q||(r.name+r.dashname+r.team+r.poc+r.desc).toLowerCase().includes(q);
+    return m&&(!aud||r.audience===aud)&&(!team||r.team===team)&&(!db||r.db===db);
+  });
+  filtered.sort((a,b)=>{
+    const va=sortKey==='no'?a.no:a[sortKey]||'';
+    const vb=sortKey==='no'?b.no:b[sortKey]||'';
+    return(va>vb?1:va<vb?-1:0)*sortDir;
+  });
+  renderTable();
+}
+
+function sortTable(k){
+  if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1}
+  document.querySelectorAll('th').forEach(t=>t.classList.remove('sorted'));
+  const map={no:0,name:1,audience:2,team:3,poc:4,db:5};
+  if(map[k]!==undefined)document.querySelectorAll('th')[map[k]].classList.add('sorted');
+  applyFilters();
+}
+
+/* ---- SIDEBAR FILTERS ---- */
+function filterSidebar(type,val){
+  if(type==='audience'){
+    document.getElementById('audFilter').value=val==='All'?'':val;
+    document.getElementById('teamFilter').value='';
+    document.querySelectorAll('[id^="nav-t-"]').forEach(e=>e.classList.remove('active'));
+  } else {
+    document.getElementById('teamFilter').value=val;
+    document.getElementById('audFilter').value='';
+    document.querySelectorAll('[id^="nav-"]').forEach(e=>e.classList.remove('active'));
+  }
+  document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
+  const id=type==='audience'?'nav-'+val:'nav-t-'+val;
+  const el=document.getElementById(id);
+  if(el)el.classList.add('active');
+  applyFilters();
+  setView('table');
+}
+
+/* ---- VIEW ---- */
+function setView(v){
+  document.getElementById('sec-overview').style.display=v==='overview'?'block':'none';
+  document.getElementById('sec-table').style.display=v==='table'?'block':'none';
+  document.getElementById('nav-overview').classList.toggle('active',v==='overview');
+  document.getElementById('nav-table').classList.toggle('active',v==='table');
+}
+
+/* ---- MODAL ---- */
+function openAddModal(){
+  editIdx=null;
+  document.getElementById('modalTitle').textContent='Add new dashboard';
+  document.getElementById('modalSub').textContent='Fill in the details below to add a new entry';
+  document.getElementById('btnDelete').style.display='none';
+  ['f-name','f-dashname','f-poc','f-desc'].forEach(id=>document.getElementById(id).value='');
+  ['f-audience','f-team','f-db'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openEditModal(idx){
+  editIdx=idx;
+  const r=DATA[idx];
+  document.getElementById('modalTitle').textContent='Edit dashboard';
+  document.getElementById('modalSub').textContent='Update the details for this dashboard entry';
+  document.getElementById('btnDelete').style.display='block';
+  document.getElementById('f-name').value=r.name;
+  document.getElementById('f-dashname').value=r.dashname;
+  document.getElementById('f-audience').value=r.audience;
+  document.getElementById('f-team').value=r.team;
+  document.getElementById('f-poc').value=r.poc;
+  document.getElementById('f-db').value=r.db;
+  document.getElementById('f-desc').value=r.desc;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open')}
+function closeModalOutside(e){if(e.target===document.getElementById('modalOverlay'))closeModal()}
+
+function saveEntry(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){showToast('Report name is required','error');return}
+  const entry={
+    no: editIdx===null ? ++maxNo : DATA[editIdx].no,
+    name,
+    dashname: document.getElementById('f-dashname').value.trim(),
+    audience: document.getElementById('f-audience').value,
+    team: document.getElementById('f-team').value,
+    poc: document.getElementById('f-poc').value.trim(),
+    db: document.getElementById('f-db').value,
+    desc: document.getElementById('f-desc').value.trim()
+  };
+  if(editIdx===null){
+    DATA.push(entry);
+    showToast('Dashboard added successfully','success');
+  } else {
+    DATA[editIdx]=entry;
+    showToast('Dashboard updated','success');
+  }
+  closeModal();
+  applyFilters();
+  updateKPIs();
+}
+
+function deleteEntry(){
+  if(editIdx===null)return;
+  if(!confirm('Delete "'+DATA[editIdx].name+'"? This cannot be undone.'))return;
+  DATA.splice(editIdx,1);
+  closeModal();
+  applyFilters();
+  updateKPIs();
+  showToast('Dashboard deleted','error');
+}
+
+function updateKPIs(){
+  document.getElementById('kpi-total').textContent=DATA.length;
+  document.getElementById('kpi-tps').textContent=DATA.filter(d=>d.audience==='TPS').length;
+  document.getElementById('kpi-mdfl').textContent=DATA.filter(d=>d.audience==='MDFL').length;
+  document.getElementById('kpi-both').textContent=DATA.filter(d=>d.audience==='TPS & MDFL').length;
+  document.getElementById('kpi-sql').textContent=DATA.filter(d=>d.db==='SQL').length;
+  document.getElementById('sf-total').textContent=DATA.length;
+  document.getElementById('nc-all').textContent=DATA.length;
+  document.getElementById('nc-tps').textContent=DATA.filter(d=>d.audience==='TPS').length;
+  document.getElementById('nc-mdfl').textContent=DATA.filter(d=>d.audience==='MDFL').length;
+  document.getElementById('nc-both').textContent=DATA.filter(d=>d.audience==='TPS & MDFL').length;
+  document.getElementById('nc-pm').textContent=DATA.filter(d=>d.audience==='PM').length;
+}
+
+/* ---- TOAST ---- */
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+type+' show';
+  setTimeout(()=>t.className='toast',2400);
+}
+
+/* ---- CHARTS ---- */
+window.addEventListener('load',()=>{
+  const teams=['Panel Quality','CME','Sampling Team','Panel Building Team','Vendor Management Team',"PM's",'Others','Finance Team'];
+  const tcounts=[19,15,11,9,6,4,2,1];
+  new Chart(document.getElementById('teamChart'),{
+    type:'bar',
+    data:{labels:teams,datasets:[{data:tcounts,backgroundColor:teams.map(t=>(TEAM_COLORS[t]||'#8891a8')+'33'),borderColor:teams.map(t=>TEAM_COLORS[t]||'#8891a8'),borderWidth:1.5,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#8891a8',font:{size:11}}},y:{grid:{display:false},ticks:{color:'#e8eaf0',font:{size:11}}}}}
+  });
+  new Chart(document.getElementById('dbChart'),{
+    type:'doughnut',
+    data:{labels:['SQL only','SQL + Excel','Excel only'],datasets:[{data:[49,16,2],backgroundColor:['#5b6ef5','#f5a623','#38d9a9'],borderColor:'#1a1d27',borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'68%'}
+  });
+  new Chart(document.getElementById('audChart'),{
+    type:'bar',
+    data:{labels:['TPS','MDFL','TPS & MDFL','PM','—'],datasets:[{data:[48,12,4,1,2],backgroundColor:['#8fa3ff33','#38d9a933','#f5a62333','#ab68ff33','#8891a833'],borderColor:['#8fa3ff','#38d9a9','#f5a623','#ab68ff','#8891a8'],borderWidth:1.5,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#e8eaf0',font:{size:12}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#8891a8',font:{size:11}}}}}
+  });
+  const topPocs=['Phanendra Vasu','Gururaj Shetty','VeeraBahu','Deepak','Internal','Saddam','Arup'];
+  new Chart(document.getElementById('pocChart'),{
+    type:'bar',
+    data:{labels:topPocs,datasets:[{data:[18,12,8,6,4,4,3],backgroundColor:topPocs.map(p=>pocColor(p)+'33'),borderColor:topPocs.map(p=>pocColor(p)),borderWidth:1.5,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#8891a8',font:{size:11}}},y:{grid:{display:false},ticks:{color:'#e8eaf0',font:{size:11}}}}}
+  });
+  renderTable();
+});
+</script>
+</body>
+</html>
